@@ -5,73 +5,16 @@
 // -noodles and delusions
 const decoder = new TextDecoder("utf-8");
 const readfile = JSON.parse(decoder.decode(Deno.readFileSync("./supersecret.txt")));
+try {
+    Deno.readFileSync("./db.txt");
+} catch {
+    Deno.writeTextFileSync("./db.txt", JSON.stringify([]));
+}
+// maelink
 const maelinkws = "wss://maelink-ws.derpygamer2142.com"
 const maelinkhttp = "https://maelink-http.derpygamer2142.com"
 const conn = new WebSocket(maelinkws);
-import { Client, Events, GatewayIntentBits } from 'discord.js';
-const disconn = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-    ]
-});
-
-disconn.once(Events.ClientReady, readyClient => {
-    console.log(`ready! logged in as ${readyClient.user.tag}`);
-});
-disconn.on(Events.Message, async message => {
-    if (message.author.bot) return;
-    if (message.channelId === readfile.DISCORDCHANNELID) {
-        conn.send(JSON.stringify({ "cmd": "post", "p": message.content }))
-    }
-});
-disconn.on(Events.InteractionCreate, async interaction => {
-    if (!interaction.isChatInputCommand()) return;
-    if (interaction.commandName === 'miau') {
-        await interaction.reply('MIAU\n*pvz victory music*');
-    }
-    if (interaction.commandName === 'echo') {
-        const message = interaction.options.getString('message');
-        await interaction.reply(message);
-    }
-    if (interaction.commandName === 'albuquerque') {
-        const message = decoder.decode(Deno.readFileSync("./albuquerque.txt"));
-        await interaction.reply(message);
-    }
-});
-import { REST, Routes } from 'discord.js';
-const commands = [
-    {
-        name: 'miau',
-        description: 'says the MIAU',
-    },
-    {
-        name: 'echo',
-        description: 'echo echo echo echo',
-        options: [{ name: 'message', type: 3, description: 'echo', required: true }],
-    },
-    {
-        name: 'albuquerque',
-        description: 'albuquerque',
-    },
-];
-const rest = new REST({ version: '10' }).setToken(readfile.DISCORDTOKEN);
-(async () => {
-    try {
-        console.log('started reloading guild (/) commands...');
-        await rest.put(
-            Routes.applicationGuildCommands(readfile.DISCORDCLIENTID, readfile.DISCORDGUILDID),
-            { body: commands },
-        );
-        console.log('done reloading guild (/) commands!');
-    } catch (error) {
-        console.error(error);
-    }
-})();
-disconn.login(readfile.DISCORDTOKEN);
-
-// maelink stuff
+let MAETOKEN;
 conn.onopen = () => {
     console.log("we're gaming on maelink | logging in");
     fetch(maelinkhttp + "/login", {
@@ -86,15 +29,18 @@ conn.onopen = () => {
     })
         .then(response => {
             if (!response.ok) {
-                console.error(`HTTP error! Status: ${response.status}`);
+                console.error(`http error! status: ${response.status}`);
                 return response.text().then(text => {
-                    console.error("Response body:", text);
-                    throw new Error(`HTTP error! Status: ${response.status}, Body: ${text}`); // Throw an error to stop further execution
+                    console.error("response body:", text);
+                    throw new Error(`http error! status: ${response.status}, body: ${text}`);
                 });
             }
             return response.json();
         })
-        .then(data => console.log(data))
+        .then(responseJson => {
+            MAETOKEN = responseJson.token;
+            return responseJson;
+        })
         .catch(e => console.error(e));
 }
 conn.onmessage = (event) => {
@@ -117,3 +63,112 @@ conn.onerror = (error) => {
 conn.onclose = () => {
     console.log("man im dead :skrul:");
 };
+// discord
+import { Client, Events, GatewayIntentBits } from 'discord.js';
+const disconn = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+    ]
+});
+
+disconn.once(Events.ClientReady, readyClient => {
+    console.log(`ready! logged in as ${readyClient.user.tag}`);
+});
+disconn.on(Events.MessageCreate, async message => {
+    if (message.author.bot) return;
+    if (message.channelId === readfile.DISCORDCHANNELID && conn.readyState === WebSocket.OPEN) {
+        let messageContent = `${message.author.displayName}: ${message.content}`;
+        if (message.attachments.size > 0) {
+            const attachment = message.attachments.first();
+            messageContent += `\n\n![](${attachment.url})`;
+        }
+        conn.send(JSON.stringify({ "cmd": "post", "p": messageContent, "token": MAETOKEN }));
+        console.log(`sent message to maelink: ${message.content}`);
+        let dbData = [];
+        try {
+            dbData = JSON.parse(decoder.decode(Deno.readFileSync("./db.txt")));
+        } catch {
+            // file doesn't exist or is empty, use empty array
+        }
+        const userEntry = dbData.find(entry => entry.userId === message.author.id);
+        if (userEntry && userEntry.choice === true) {
+            message.react("✅");
+        }
+    }
+});
+disconn.on(Events.InteractionCreate, async interaction => {
+    if (!interaction.isChatInputCommand()) return;
+    switch (interaction.commandName) {
+        case 'miau':
+            await interaction.reply('MIAU\n*pvz victory music*');
+            break;
+        case 'echo':
+            const message = interaction.options.getString('message');
+            await interaction.reply(message);
+            break;
+        case 'albuquerque':
+            const albuquerqueMessage = decoder.decode(Deno.readFileSync("./albuquerque.txt"));
+            await interaction.reply(albuquerqueMessage);
+            break;
+        case 'miaugif':
+            await interaction.reply("https://tenor.com/view/miau-hd-adobe-after-effects-glass-breaking-preset-gif-752576862881430143");
+            break;
+        case 'toggle_react':
+            const enabled = interaction.options.getBoolean('enabled');
+            const userId = interaction.user.id;
+            let dbData = [];
+            try {
+                dbData = JSON.parse(decoder.decode(Deno.readFileSync("./db.txt")));
+            } catch {
+                // file doesn't exist or is empty, use empty array
+            }
+                dbData.push({
+                    userId: userId, 
+                    choice: enabled
+                });
+                Deno.writeTextFileSync("./db.txt", JSON.stringify(dbData));
+                await interaction.reply({ content: `✅ is now ${enabled ? "enabled" : "disabled"}`, ephemeral: true });
+            }
+        
+    }
+);
+import { REST, Routes } from 'discord.js';
+const commands = [
+    {
+        name: 'miau',
+        description: 'says the MIAU',
+    },
+    {
+        name: 'echo',
+        description: 'echo echo echo echo',
+        options: [{ name: 'message', type: 3, description: 'echo', required: true }],
+    },
+    {
+        name: 'albuquerque',
+        description: 'albuquerque',
+    },
+    {
+        name: 'miaugif',
+        description: 'watch the miau as it explodes, albot edition',
+    },
+    {
+        name: 'toggle_react',
+        description: 'toggle if i ✅ you in #maelink',
+        options: [{ name: 'enabled', type: 5, description: 'whether ✅ should be enabled', required: false }],    },
+];
+const rest = new REST({ version: '10' }).setToken(readfile.DISCORDTOKEN);
+(async () => {
+    try {
+        console.log('started reloading guild (/) commands...');
+        await rest.put(
+            Routes.applicationGuildCommands(readfile.DISCORDCLIENTID, readfile.DISCORDGUILDID),
+            { body: commands },
+        );
+        console.log('done reloading guild (/) commands!');
+    } catch (error) {
+        console.error(error);
+    }
+})();
+disconn.login(readfile.DISCORDTOKEN);
