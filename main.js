@@ -1,3 +1,7 @@
+// deno-lint-ignore-file
+
+// ^^^^ DO NOT REMOVE THIS, THIS IS TO DISABLE DENO COMPLAINING ABOUT MY BAD CODE -delusions ^^^^
+
 // this is a mess
 // at least we think it is
 // ok it definitely is
@@ -15,7 +19,7 @@ const maelinkws = "wss://maelink-ws.derpygamer2142.com"
 const maelinkhttp = "https://maelink-http.derpygamer2142.com"
 const conn = new WebSocket(maelinkws);
 let MAETOKEN;
-console.log("ALBUQUERQUEBOT - v1.2 - bridge time");
+console.log("ALBUQUERQUEBOT - v1.31 - attachments");
 conn.onopen = () => {
     console.log("starting up maelink bot...");
     fetch(maelinkhttp + "/login", {
@@ -63,7 +67,8 @@ conn.onerror = (error) => {
     console.error("ruh roh:", error);
 };
 conn.onclose = () => {
-    console.log("man im dead :skrul:");
+    console.log("man im dead :skrul: | reconnecting");
+    setTimeout(connectWebSocket, 500);
 };
 // discord
 import { Client, Events, GatewayIntentBits } from 'discord.js';
@@ -77,7 +82,7 @@ const disconn = new Client({
 disconn.on(Events.MessageCreate, async message => {
     if (message.author.bot) return;
     if (message.channelId === readfile.DISCORDCHANNELID && conn.readyState === WebSocket.OPEN) {
-        let messageContent = `${message.author.displayName}: ${message.content}`;
+        let messageContent = `${message.author.displayName}: ${message.content.replace(/<:.*?:(\d+)>/g, '![](https://cdn.discordapp.com/emojis/$1.png?size=16)')}`;
         if (message.attachments.size > 0) {
             const attachment = message.attachments.first();
             messageContent += `\n\n![](${attachment.url})`;
