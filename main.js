@@ -17,38 +17,43 @@ try {
 // maelink
 const maelinkws = "wss://maelink-ws.derpygamer2142.com"
 const maelinkhttp = "https://maelink-http.derpygamer2142.com"
-const conn = new WebSocket(maelinkws);
-let MAETOKEN;
-console.log("ALBUQUERQUEBOT - v1.31 - attachments");
-conn.onopen = () => {
-    console.log("starting up maelink bot...");
-    fetch(maelinkhttp + "/login", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            "username": "albuquerquebot",
-            "password": readfile.MAELINKPASSWORD
+function connectWebSocket() {
+    const conn = new WebSocket(maelinkws);
+    let MAETOKEN;
+    console.log("ALBUQUERQUEBOT - v1.35 - attachments");
+    conn.onopen = () => {
+        console.log("starting up maelink bot...");
+        fetch(maelinkhttp + "/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                "username": "albuquerquebot",
+                "password": readfile.MAELINKPASSWORD
+            })
         })
-    })
-        .then(response => {
-            if (!response.ok) {
-                console.error(`http error! status: ${response.status}`);
-                return response.text().then(text => {
-                    console.error("response body:", text);
-                    throw new Error(`http error! status: ${response.status}, body: ${text}`);
-                });
-            }
-            return response.json();
-        })
-        .then(responseJson => {
-            MAETOKEN = responseJson.token;
-            console.log("maelink bot has started up!");
-            return responseJson;
-        })
-        .catch(e => console.error(e));
+            .then(response => {
+                if (!response.ok) {
+                    console.error(`http error! status: ${response.status}`);
+                    return response.text().then(text => {
+                        console.error("response body:", text);
+                        throw new Error(`http error! status: ${response.status}, body: ${text}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(responseJson => {
+                MAETOKEN = responseJson.token;
+                console.log("maelink bot has started up!");
+                return responseJson;
+            })
+            .catch(e => console.error(e));
+    }
+    return conn;
 }
+
+const conn = connectWebSocket();
 conn.onmessage = (event) => {
     const data = JSON.parse(event.data)
     if (data.cmd === "post_home" && data.post.u != "albuquerquebot") { // we dont want infinite pingpong
