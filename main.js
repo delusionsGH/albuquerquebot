@@ -15,8 +15,9 @@ const maelinkws = "wss://maelink-ws.derpygamer2142.com"
 const maelinkhttp = "https://maelink-http.derpygamer2142.com"
 const conn = new WebSocket(maelinkws);
 let MAETOKEN;
+console.log("ALBUQUERQUEBOT - v1.2 - bridge time");
 conn.onopen = () => {
-    console.log("we're gaming on maelink | logging in");
+    console.log("starting up maelink bot...");
     fetch(maelinkhttp + "/login", {
         method: "POST",
         headers: {
@@ -39,6 +40,7 @@ conn.onopen = () => {
         })
         .then(responseJson => {
             MAETOKEN = responseJson.token;
+            console.log("maelink bot has started up!");
             return responseJson;
         })
         .catch(e => console.error(e));
@@ -72,10 +74,6 @@ const disconn = new Client({
         GatewayIntentBits.MessageContent,
     ]
 });
-
-disconn.once(Events.ClientReady, readyClient => {
-    console.log(`ready! logged in as ${readyClient.user.tag}`);
-});
 disconn.on(Events.MessageCreate, async message => {
     if (message.author.bot) return;
     if (message.channelId === readfile.DISCORDCHANNELID && conn.readyState === WebSocket.OPEN) {
@@ -85,7 +83,6 @@ disconn.on(Events.MessageCreate, async message => {
             messageContent += `\n\n![](${attachment.url})`;
         }
         conn.send(JSON.stringify({ "cmd": "post", "p": messageContent, "token": MAETOKEN }));
-        console.log(`sent message to maelink: ${message.content}`);
         let dbData = [];
         try {
             dbData = JSON.parse(decoder.decode(Deno.readFileSync("./db.txt")));
@@ -135,7 +132,27 @@ disconn.on(Events.InteractionCreate, async interaction => {
     }
 );
 import { REST, Routes } from 'discord.js';
-const commands = [
+const gcommands = [
+    {
+        name: 'toggle_react',
+        description: 'toggle if i ✅ you in #maelink',
+        options: [{ name: 'enabled', type: 5, description: 'whether ✅ should be enabled', required: false }],
+    },
+];
+const rest = new REST({ version: '10' }).setToken(readfile.DISCORDTOKEN);
+(async () => {
+    try {
+        console.log('started reloading guild (/) commands...');
+        await rest.put(
+            Routes.applicationGuildCommands(readfile.DISCORDCLIENTID, readfile.DISCORDGUILDID),
+            { body: gcommands },
+        );
+        console.log('done reloading guild (/) commands!');
+    } catch (error) {
+        console.error(error);
+    }
+})();
+const glcommands = [
     {
         name: 'miau',
         description: 'says the MIAU',
@@ -153,22 +170,21 @@ const commands = [
         name: 'miaugif',
         description: 'watch the miau as it explodes, albot edition',
     },
-    {
-        name: 'toggle_react',
-        description: 'toggle if i ✅ you in #maelink',
-        options: [{ name: 'enabled', type: 5, description: 'whether ✅ should be enabled', required: false }],    },
 ];
-const rest = new REST({ version: '10' }).setToken(readfile.DISCORDTOKEN);
+const grest = new REST({ version: '10' }).setToken(readfile.DISCORDTOKEN);
 (async () => {
     try {
-        console.log('started reloading guild (/) commands...');
-        await rest.put(
-            Routes.applicationGuildCommands(readfile.DISCORDCLIENTID, readfile.DISCORDGUILDID),
-            { body: commands },
+        console.log('started reloading application (/) commands...');
+        await grest.put(
+            Routes.applicationCommands(readfile.DISCORDCLIENTID),
+            { body: glcommands },
         );
-        console.log('done reloading guild (/) commands!');
+        console.log('done reloading application (/) commands!');
     } catch (error) {
         console.error(error);
     }
 })();
+disconn.on(Events.ClientReady, c => {
+    console.log(`discord bot has started up!`);
+});
 disconn.login(readfile.DISCORDTOKEN);
