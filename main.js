@@ -121,10 +121,15 @@ disconn.on(Events.InteractionCreate, async interaction => {
             } catch {
                 // file doesn't exist or is empty, use empty array
             }
-                dbData.push({
-                    userId: userId, 
-                    choice: enabled
-                });
+                const existingUser = dbData.find(entry => entry.userId === userId);
+                if (existingUser) {
+                    existingUser.choice = enabled;
+                } else {
+                    dbData.push({
+                        userId: userId,
+                        choice: enabled
+                    });
+                }
                 Deno.writeTextFileSync("./db.txt", JSON.stringify(dbData));
                 await interaction.reply({ content: `✅ is now ${enabled ? "enabled" : "disabled"}`, ephemeral: true });
             }
