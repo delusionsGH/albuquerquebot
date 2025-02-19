@@ -15,11 +15,11 @@ try {
     Deno.writeTextFileSync("./db.txt", JSON.stringify([]));
 }
 // maelink
+let MAETOKEN;
 const maelinkws = "wss://maelink-ws.derpygamer2142.com"
 const maelinkhttp = "https://maelink-http.derpygamer2142.com"
 function connectWebSocket() {
     const conn = new WebSocket(maelinkws);
-    let MAETOKEN;
     console.log("ALBUQUERQUEBOT - v1.35 - attachments");
     conn.onopen = () => {
         console.log("starting up maelink bot...");
