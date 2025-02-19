@@ -82,7 +82,7 @@ const disconn = new Client({
 disconn.on(Events.MessageCreate, async message => {
     if (message.author.bot) return;
     if (message.channelId === readfile.DISCORDCHANNELID && conn.readyState === WebSocket.OPEN) {
-        let messageContent = `${message.author.globalName}: ${message.content.replace(/<:.*?:(\d+)>/g, '![](https://cdn.discordapp.com/emojis/$1.png?size=16)')}`;
+        let messageContent = `${message.author.username}: ${message.content.replace(/<:.*?:(\d+)>/g, '![](https://cdn.discordapp.com/emojis/$1.png?size=16)')}`;
         if (message.attachments.size > 0) {
             const attachment = message.attachments.first();
             messageContent += `\n\n![](${attachment.url})`;
