@@ -70,6 +70,8 @@ const rest = new REST({ version: '10' }).setToken(readfile.DISCORDTOKEN);
     }
 })();
 disconn.login(readfile.DISCORDTOKEN);
+
+// maelink stuff
 conn.onopen = () => {
     console.log("we're gaming on maelink | logging in");
     fetch(maelinkhttp + "/login", {
